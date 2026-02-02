@@ -336,20 +336,125 @@ If briefs may contain sensitive information:
 
 ---
 
+## State Management
+
+### The Reliability Problem
+
+A critical failure mode in early implementations: relying on the AI model to "remember" to update state files. Models forget, get distracted, or crash before updating. **Model-driven state updates are unreliable by design.**
+
+### Principle: Automatic State via Hooks
+
+**State updates MUST NOT depend on the AI model's volition.**
+
+Instead, use runtime hooks that execute automatically:
+
+| Hook | Trigger | State Update |
+|------|---------|--------------|
+| `SessionStart` | Session begins | `status → working` |
+| `PostToolUse` | After any tool call | `last_active → now` (heartbeat) |
+| `SessionEnd` | Session ends cleanly | `status → idle` |
+
+The model MAY still call state-update for human-readable notes (e.g., `current_task` descriptions), but this is supplementary, not authoritative.
+
+### Heartbeat Pattern
+
+The `PostToolUse` hook provides an automatic heartbeat:
+
+```bash
+#!/bin/bash
+# activity-hook.sh - Update last_active on every tool call
+
+STATE_FILE="./state.json"
+
+# Fast, atomic timestamp update (runs in background to avoid blocking)
+python3 -c "
+import json, os, tempfile
+from datetime import datetime, timezone
+try:
+    with open('$STATE_FILE') as f:
+        state = json.load(f)
+    state['last_active'] = datetime.now(timezone.utc).isoformat()
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname('$STATE_FILE'))
+    with os.fdopen(fd, 'w') as f:
+        json.dump(state, f, indent=2)
+    os.rename(tmp, '$STATE_FILE')
+except: pass
+" &
+```
+
+**Considerations:**
+- Run in background (`&`) to avoid blocking tool execution
+- Use aggressive timeout if running synchronously (e.g., 200ms)
+- Throttle updates if needed (max once per N seconds)
+
+### Watchdog Pattern
+
+**Never trust state files alone.** Validate against external ground truth:
+
+```bash
+#!/bin/bash
+# watchdog-sessions - Detect stalled agents
+
+# Check if AI process actually exists in tmux pane
+has_ai_process() {
+    local session="$1"
+    pstree -p $(tmux list-panes -t "$session" -F '#{pane_pid}') 2>/dev/null \
+        | grep -qE '(claude|gemini|codex)\('
+}
+
+for domain in $DOMAINS; do
+    if has_ai_process "$domain"; then
+        echo "$domain: ACTIVE"
+    elif [[ $(jq -r '.status' "$domain/state.json") == "working" ]]; then
+        echo "$domain: STALLED (state=working but no process)"
+        # Alert or auto-recover
+    fi
+done
+```
+
+**Status precedence:** `watchdog detection > hook updates > model updates`
+
+### Edge Cases
+
+| Scenario | Problem | Mitigation |
+|----------|---------|------------|
+| Long think without tools | Heartbeat stales | Watchdog checks process existence, not just timestamp |
+| Crash before SessionEnd | status stays "working" | Watchdog detects no process, marks idle after grace period |
+| Hook execution fails | State not updated | Log hook failures, retry transient errors |
+| Multiple rapid tool calls | Timestamp reordering | Use monotonic time or accept last-write-wins |
+| PID reuse after crash | Wrong process detected | Store PID + start_time, verify both |
+
+### Recommended Hook Configuration
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{"command": "./scripts/session-start-hook.sh"}],
+    "PostToolUse": [{"command": "./scripts/activity-hook.sh", "timeout": 5}],
+    "SessionEnd": [{"command": "./scripts/session-end-hook.sh"}]
+  }
+}
+```
+
+---
+
 ## Best Practices
 
 ### DO:
-- Update `state.json` at every task transition
+- Use hooks for automatic state updates (not model memory)
 - Keep briefs concise but complete
 - Log significant events to ops.jsonl
+- Run a watchdog that checks process existence
 - Test recovery flow regularly
 - Design for "fresh agent with context" scenario
 - Use atomic writes for all state updates
 
 ### DON'T:
+- Depend on the model to remember to update state
 - Depend solely on platform resume features
 - Store essential state only in conversation history
 - Store secrets in state files
+- Trust state files without process verification
 - Assume sessions will persist
 - Make briefs that require transcript to understand
 - Use relative paths in production
@@ -418,10 +523,12 @@ A: Each agent should have its own state directory, or use proper locking/coordin
 This protocol emerged from multi-agent debugging sessions involving:
 
 - **Claude** (Anthropic): Problem identification, implementation, specification writing
-- **Codex** (OpenAI): Root cause analysis, technical review
-- **Gemini** (Google): Conceptual reframe ("Phoenix" metaphor), safety recommendations
+- **Codex** (OpenAI): Root cause analysis, technical review, state management edge cases
+- **Gemini** (Google): Conceptual reframe ("Phoenix" metaphor), safety recommendations, hook architecture review
 
-The core insight—that sessions should be treated as ephemeral rather than preserved—emerged from analyzing why traditional recovery approaches fail.
+Key insights from collaborative development:
+- Sessions should be treated as ephemeral rather than preserved (v1.0)
+- State updates must not depend on model memory—use hooks (v1.2)
 
 ---
 
@@ -433,5 +540,6 @@ This specification is released under CC0 (public domain). Use freely.
 
 ## Version History
 
+- **v1.2** (2026-02-02): Added State Management section with hook-based updates, heartbeat pattern, and watchdog validation (tripartite review with Claude, Codex, Gemini)
 - **v1.1** (2026-02-02): Added Prerequisites, Security, Concurrency sections; refined attribution; softened absolute claims per tripartite review
 - **v1.0** (2026-02-02): Initial specification
