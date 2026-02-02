@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="fireGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff6b00"/>
+      <stop offset="50%" style="stop-color:#ff9500"/>
+      <stop offset="100%" style="stop-color:#ffcc00"/>
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#0f0f1a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bgGrad)"/>
+
+  <!-- Scattered JSON/state files at bottom -->
+  <g opacity="0.3" fill="#4a5568">
+    <rect x="50" y="320" width="60" height="40" rx="3"/>
+    <rect x="130" y="330" width="50" height="35" rx="3"/>
+    <rect x="200" y="315" width="55" height="45" rx="3"/>
+    <rect x="280" y="325" width="65" height="38" rx="3"/>
+  </g>
+  <text x="65" y="345" fill="#718096" font-family="monospace" font-size="8">{state}</text>
+  <text x="145" y="350" fill="#718096" font-family="monospace" font-size="8">.json</text>
+  <text x="215" y="342" fill="#718096" font-family="monospace" font-size="8">brief</text>
+  <text x="295" y="348" fill="#718096" font-family="monospace" font-size="8">ops.log</text>
+
+  <!-- Rising data streams -->
+  <g stroke="url(#fireGrad)" stroke-width="2" fill="none" opacity="0.6">
+    <path d="M80 300 Q90 250 100 200 Q110 150 130 100"/>
+    <path d="M150 310 Q160 260 170 210 Q180 160 200 110"/>
+    <path d="M220 305 Q225 255 230 205 Q235 155 250 105"/>
+    <path d="M300 300 Q295 250 285 200 Q275 150 260 100"/>
+  </g>
+
+  <!-- Phoenix body - stylized -->
+  <g fill="url(#fireGrad)">
+    <!-- Body -->
+    <ellipse cx="200" cy="180" rx="45" ry="60"/>
+    <!-- Head -->
+    <circle cx="200" cy="110" r="25"/>
+    <!-- Beak -->
+    <polygon points="200,95 210,85 200,80 190,85"/>
+    <!-- Wings -->
+    <path d="M155 180 Q100 150 80 100 Q120 130 160 150 Z"/>
+    <path d="M245 180 Q300 150 320 100 Q280 130 240 150 Z"/>
+    <!-- Tail feathers -->
+    <path d="M180 240 Q150 300 120 350 Q170 300 185 250 Z"/>
+    <path d="M200 245 Q200 310 200 370 Q200 310 200 250 Z"/>
+    <path d="M220 240 Q250 300 280 350 Q230 300 215 250 Z"/>
+  </g>
+
+  <!-- Eye -->
+  <circle cx="200" cy="108" r="5" fill="#1a1a2e"/>
+
+  <!-- Code particles rising -->
+  <g fill="#ffcc00" font-family="monospace" font-size="10" opacity="0.7">
+    <text x="90" y="130">01</text>
+    <text x="280" y="140">{ }</text>
+    <text x="120" y="80">::</text>
+    <text x="260" y="70">==</text>
+    <text x="170" y="50">fn</text>
+    <text x="220" y="60">-></text>
+  </g>
+
+  <!-- Glow effect -->
+  <ellipse cx="200" cy="180" rx="80" ry="100" fill="url(#fireGrad)" opacity="0.1"/>
+</svg>

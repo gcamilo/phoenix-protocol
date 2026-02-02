@@ -1,5 +1,9 @@
 # Phoenix Protocol
 
+<p align="center">
+  <img src="phoenix.svg" alt="Phoenix Protocol" width="300"/>
+</p>
+
 A resilient session recovery pattern for AI agents.
 
 ## What is this?
